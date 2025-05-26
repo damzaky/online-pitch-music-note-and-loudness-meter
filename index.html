@@ -85,6 +85,32 @@
       <div class="loudness-bar" id="loudnessBar"></div>
     </div>
 
+    <div>
+      <div
+        style="
+          margin-top: 20px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 20px;
+        "
+      >
+        <button id="recordBtn">Start Recording</button>
+        <button id="stopBtn" disabled>Stop Recording</button>
+        <a
+          id="downloadLink"
+          download="recording.wav"
+          style="display: none; color: #fff"
+          >Download Recording</a
+        >
+      </div>
+      <audio
+        id="audioPlayback"
+        controls
+        style="display: none; margin: 20px auto"
+      ></audio>
+    </div>
+
     <script>
       const pitchElem = document.getElementById("pitch");
       const noteElem = document.getElementById("note");
@@ -245,6 +271,52 @@
       }
 
       setup().catch((err) => alert("Microphone access is required."));
+    </script>
+
+    <script>
+      let mediaRecorder;
+      let recordedChunks = [];
+      let streamRef;
+
+      const recordBtn = document.getElementById("recordBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const audioPlayback = document.getElementById("audioPlayback");
+      const downloadLink = document.getElementById("downloadLink");
+
+      recordBtn.onclick = async () => {
+        if (!streamRef) {
+          streamRef = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+        }
+
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(streamRef);
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) recordedChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: "audio/wav" });
+          const url = URL.createObjectURL(blob);
+          audioPlayback.src = url;
+          audioPlayback.style.display = "block";
+
+          downloadLink.href = url;
+          downloadLink.style.display = "block";
+        };
+
+        mediaRecorder.start();
+        recordBtn.disabled = true;
+        stopBtn.disabled = false;
+      };
+
+      stopBtn.onclick = () => {
+        mediaRecorder.stop();
+        recordBtn.disabled = false;
+        stopBtn.disabled = true;
+      };
     </script>
   </body>
 </html>
